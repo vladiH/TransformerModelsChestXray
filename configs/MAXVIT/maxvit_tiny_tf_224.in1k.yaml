@@ -1,0 +1,15 @@
+DATA:
+  IMG_SIZE: 224
+MODEL:
+  TYPE: maxvit
+  NAME: maxvit_tiny_tf_224.in1k
+  MAXVIT:
+    NUM_CLASSES: 14
+    POOL_SIZE: 7
+    CROP_PCT: 0.95
+    INTERPOLATION: bicubic
+    MEAN: [0.5, 0.5, 0.5] #RGB
+    STD: [0.5, 0.5, 0.5] #RGB
+    FIRST_CONV: stem.conv1
+    CLASSIFIER: head.fc
+    FIXED_INPUT_SIZE: True
