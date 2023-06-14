@@ -154,9 +154,9 @@ _C.TEST.CROP = True
 # -----------------------------------------------------------------------------
 # Misc
 # -----------------------------------------------------------------------------
-# Mixed precision opt level, if O0, no amp is used ('O0', 'O1', 'O2')
+# Mixed precision opt level, if False, no amp is used
 # overwritten by command line argument
-_C.AMP_OPT_LEVEL = ''
+_C.AMP_OPT_LEVEL = True
 # Path to output folder, overwritten by command line argument
 _C.OUTPUT = ''
 # Tag of experiment, overwritten by command line argument
