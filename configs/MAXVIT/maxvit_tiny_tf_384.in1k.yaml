@@ -1,0 +1,5 @@
+DATA:
+  IMG_SIZE: 384
+MODEL:
+  TYPE: maxvit
+  NAME: maxvit_tiny_tf_384.in1k

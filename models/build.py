@@ -29,7 +29,7 @@ def build_model(config):
                                 use_checkpoint=config.TRAIN.USE_CHECKPOINT,
                                 num_mlp_heads=config.NIH.num_mlp_heads)
     elif model_type == 'maxvit':
-        model = MaxVitTransformer(model_name=config.MODEL.NAME, img_size=config.DATA.IMG_SIZE, in_chans=config.MODEL.SWIN.IN_CHANS,
+        model = MaxVitTransformer(model_name=config.MODEL.NAME, img_size=config.DATA.IMG_SIZE, in_chans=config.MODEL.MAXVIT.IN_CHANS,
                                 num_classes=config.MODEL.NUM_CLASSES, num_mlp_heads=config.NIH.num_mlp_heads)
     else:
         raise NotImplementedError(f"Unkown model: {model_type}")

@@ -2,4 +2,4 @@ DATA:
   IMG_SIZE: 224
 MODEL:
   TYPE: maxvit
-  NAME: maxvit_tiny_tf_224.in1k
+  NAME: maxvit_large_tf_224.in1k

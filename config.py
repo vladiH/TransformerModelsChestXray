@@ -74,7 +74,8 @@ _C.MODEL.SWIN.APE = False
 _C.MODEL.SWIN.PATCH_NORM = True
 
 #Maxvit Transformer parameters
-
+_C.MODEL.MAXVIT = CN()
+_C.MODEL.MAXVIT.IN_CHANS = 3
 # -----------------------------------------------------------------------------
 # Training settings
 # -----------------------------------------------------------------------------
