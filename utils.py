@@ -8,7 +8,7 @@
 import os
 import torch
 import torch.distributed as dist
-
+import numpy as np
 
 def load_checkpoint(config, model, optimizer, lr_scheduler, logger, scaler):
     logger.info(f"==============> Resuming form {config.MODEL.RESUME}....................")
@@ -28,6 +28,7 @@ def load_checkpoint(config, model, optimizer, lr_scheduler, logger, scaler):
     # logger.info(msg)
     logger.info("Pretrain model loaded successfully!")
     max_accuracy = 0.0
+    min_loss = np.inf
     if not config.EVAL_MODE and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
         optimizer.load_state_dict(checkpoint['optimizer'])
         lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
@@ -39,17 +40,20 @@ def load_checkpoint(config, model, optimizer, lr_scheduler, logger, scaler):
         logger.info(f"=> loaded successfully '{config.MODEL.RESUME}' (epoch {checkpoint['epoch']})")
         if 'max_accuracy' in checkpoint:
             max_accuracy = checkpoint['max_accuracy']
+        if 'min_loss' in checkpoint:
+            min_loss = checkpoint['min_loss']
 
     del checkpoint
     torch.cuda.empty_cache()
-    return max_accuracy
+    return max_accuracy, min_loss
 
 
-def save_checkpoint(config, epoch, model, max_accuracy, optimizer, lr_scheduler, logger, scaler):
+def save_checkpoint(config, epoch, model, max_accuracy, min_loss, optimizer, lr_scheduler, logger, scaler):
     save_state = {'model': model.state_dict(),
                   'optimizer': optimizer.state_dict(),
                   'lr_scheduler': lr_scheduler.state_dict(),
                   'max_accuracy': max_accuracy,
+                  'min_loss': min_loss,
                   'epoch': epoch,
                   'config': config}
     if config.AMP_OPT_LEVEL:

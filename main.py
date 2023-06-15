@@ -113,7 +113,7 @@ def main(config):
         criterion = torch.nn.CrossEntropyLoss()
 
     max_accuracy = 0.0
-
+    min_loss = np.inf
     if config.TRAIN.AUTO_RESUME:
         resume_file = auto_resume_helper(config.OUTPUT)
         if resume_file:
@@ -127,7 +127,7 @@ def main(config):
             logger.info(f'no checkpoint found in {config.OUTPUT}, ignoring auto resume')
 
     if config.MODEL.RESUME:
-        max_accuracy = load_checkpoint(config, model_without_ddp, optimizer, lr_scheduler, logger, scaler)
+        max_accuracy, min_loss = load_checkpoint(config, model_without_ddp, optimizer, lr_scheduler, logger, scaler)
         acc1, acc5, loss = validate(config, data_loader_val, model, is_validation=True)
         logger.info(f"Mean Accuracy of the network on the {len(dataset_val)} validation images: {acc1:.2f}%")
         logger.info(f"Mean Loss of the network on the {len(dataset_val)} validation images: {loss:.5f}")
@@ -143,21 +143,50 @@ def main(config):
         return
 
     logger.info("Start training")
+    if config.TRAIN.EARLYSTOPPING.MONITOR is not None:
+        logger.info(f"Early Stopping is monitoring: {config.TRAIN.EARLYSTOPPING.MONITOR}")
+        best_epoch = config.TRAIN.START_EPOCH
+        no_improvement_epochs = 0
+        max_no_improvement_epochs = config.TRAIN.EARLYSTOPPING.PATIENCE
+        if config.TRAIN.EARLYSTOPPING.MONITOR == "acc":
+            monitor = max_accuracy
+        else:
+            monitor = min_loss
+
     start_time = time.time()
     for epoch in range(config.TRAIN.START_EPOCH, config.TRAIN.EPOCHS):
         data_loader_train.sampler.set_epoch(epoch)
 
         train_one_epoch(config, model, criterion, data_loader_train, optimizer, epoch, mixup_fn, lr_scheduler, scaler)
-        if dist.get_rank() == 0 and (epoch % config.SAVE_FREQ == 0 or epoch == (config.TRAIN.EPOCHS - 1)):
-            save_checkpoint(config, epoch, model_without_ddp, max_accuracy, optimizer, lr_scheduler, logger, scaler)
-
+        
         acc1, acc5, loss = validate(config, data_loader_val, model, is_validation=True)
         logger.info(f"Mean Accuracy of the network on the {len(dataset_val)} validation images: {acc1:.2f}%")
         logger.info(f"Mean Loss of the network on the {len(dataset_val)} validation images: {loss:.5f}")
+        
+        if config.TRAIN.EARLYSTOPPING.MONITOR is not None:
+            has_improved, value = early_stopping(config.TRAIN.EARLYSTOPPING.MONITOR, acc1, loss, monitor)
+            if has_improved:
+                monitor = value
+                best_epoch = epoch
+                no_improvement_epochs = 0
+                if dist.get_rank() == 0:
+                    save_checkpoint(config, epoch, model_without_ddp, max_accuracy, min_loss, optimizer, lr_scheduler, logger, scaler)
+            else:
+                no_improvement_epochs += 1
+
+            if no_improvement_epochs >= max_no_improvement_epochs:
+                logger.info(f"No improvement in validation {config.TRAIN.EARLYSTOPPING.MONITOR} \n"
+                    f"for {max_no_improvement_epochs} epochs. Stopping training.")
+                break
+        else:
+            if dist.get_rank() == 0 and (epoch % config.SAVE_FREQ == 0 or epoch == (config.TRAIN.EPOCHS - 1)):
+                save_checkpoint(config, epoch, model_without_ddp, max_accuracy, min_loss, optimizer, lr_scheduler, logger, scaler)
+
         acc1, acc5, loss = validate(config, data_loader_test, model, is_validation=False)
         logger.info(f"Mean Accuracy of the network on the {len(dataset_test)} test images: {acc1:.2f}%")
         logger.info(f"Mean Loss of the network on the {len(dataset_test)} test images: {loss:.5f}")
         max_accuracy = max(max_accuracy, acc1)
+        min_loss = min(min_loss, loss)
         logger.info(f'Test Max mean accuracy: {max_accuracy:.2f}%')
 
     total_time = time.time() - start_time
@@ -361,6 +390,14 @@ def throughput(data_loader, model, logger):
         logger.info(f"batch_size {batch_size} throughput {30 * batch_size / (tic2 - tic1)}")
         return
 
+def early_stopping(monitor, monitor_acc, monitor_loss,  monitor_previus_value):
+    if monitor == 'acc':
+        if monitor_acc > monitor_previus_value:
+            return True, monitor_acc
+    if monitor == 'loss':
+        if monitor_loss < monitor_previus_value:
+            return True, monitor_loss
+    return False, None
 
 if __name__ == '__main__':
     _, config = parse_option()
