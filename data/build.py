@@ -13,7 +13,6 @@ from torchvision import datasets, transforms
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from timm.data import Mixup
 from timm.data import create_transform
-from timm.data.transforms import _pil_interp
 
 from .custom_image_folder import MyImageFolder
 from .cached_image_folder import CachedImageFolder
@@ -126,14 +125,14 @@ def build_transform(is_train, config):
         if config.TEST.CROP:
             size = int((256 / 224) * config.DATA.IMG_SIZE)
             t.append(
-                transforms.Resize(size, interpolation=_pil_interp(config.DATA.INTERPOLATION)),
+                transforms.Resize(size, interpolation=config.DATA.INTERPOLATION),
                 # to maintain same ratio w.r.t. 224 images
             )
             t.append(transforms.CenterCrop(config.DATA.IMG_SIZE))
         else:
             t.append(
                 transforms.Resize((config.DATA.IMG_SIZE, config.DATA.IMG_SIZE),
-                                  interpolation=_pil_interp(config.DATA.INTERPOLATION))
+                                  interpolation=config.DATA.INTERPOLATION)
             )
 
     t.append(transforms.ToTensor())

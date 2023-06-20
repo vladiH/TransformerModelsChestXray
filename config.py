@@ -27,7 +27,7 @@ _C.DATA.DATA_PATH = ''
 _C.DATA.DATASET = 'nih'
 # Input image size
 _C.DATA.IMG_SIZE = 224
-# Interpolation to resize image (random, bilinear, bicubic)
+# Interpolation to resize image (random, bilinear, bicubic, nearest)
 _C.DATA.INTERPOLATION = 'bicubic'
 # Use zipped dataset instead of folder dataset
 # could be overwritten by command line argument
