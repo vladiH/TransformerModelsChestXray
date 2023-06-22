@@ -64,6 +64,16 @@ def save_checkpoint(config, epoch, model, max_accuracy, min_loss, optimizer, lr_
     torch.save(save_state, save_path)
     logger.info(f"{save_path} saved !!!")
 
+    # Remove the oldest checkpoint if the number of saved checkpoints exceeds the limit
+    checkpoint_files = os.listdir(config.OUTPUT)
+    checkpoint_files = [f for f in checkpoint_files if f.endswith('.pth')]
+    checkpoint_files = sorted(checkpoint_files, key=lambda x: int(x.split('_')[2].split('.')[0]))
+    if len(checkpoint_files) > config.MAX_CHECKPOINTS:
+        oldest_checkpoint_file = checkpoint_files[0]
+        oldest_checkpoint_path = os.path.join(config.OUTPUT, oldest_checkpoint_file)
+        os.remove(oldest_checkpoint_path)
+        logger.info(f"Removed oldest checkpoint: {oldest_checkpoint_path}")
+
 
 def get_grad_norm(parameters, norm_type=2):
     if isinstance(parameters, torch.Tensor):

@@ -28,6 +28,7 @@ from logger import create_logger
 from utils import load_checkpoint, save_checkpoint, get_grad_norm, auto_resume_helper, reduce_tensor
 from sklearn.metrics import roc_auc_score
 
+from tqdm import tqdm
 #https://pytorch.org/docs/stable/notes/amp_examples.html#amp-examples
 #https://pytorch.org/tutorials/recipes/recipes/amp_recipe.html
 from torch.cuda.amp import autocast, GradScaler 
@@ -63,7 +64,7 @@ def parse_option():
     parser.add_argument('--throughput', action='store_true', help='Test throughput only')
 
     # distributed training
-    parser.add_argument("--local_rank", type=int, required=True, help='local rank for DistributedDataParallel')
+    # parser.add_argument("--local_rank", type=int, required=True, help='local rank for DistributedDataParallel')
 
     #nih
     parser.add_argument("--trainset", type=str, required=True, help='path to train dataset')
@@ -214,7 +215,7 @@ def train_one_epoch(config, model, criterion, data_loader, optimizer, epoch, mix
             samples, targets = mixup_fn(samples, targets)   #todo iterate on targets
 
         if config.TRAIN.ACCUMULATION_STEPS > 1:
-            with autocast(device_type='cuda', dtype=torch.float16):
+            with torch.autocast(device_type='cuda', dtype=torch.float16):
                 outputs = model(samples)
                 loss = criterion(outputs[0], targets[0])
                 for i in range(1, len(targets)):
@@ -233,7 +234,7 @@ def train_one_epoch(config, model, criterion, data_loader, optimizer, epoch, mix
                 optimizer.zero_grad()
                 lr_scheduler.step_update(epoch * num_steps + idx)
         else:
-            with autocast(device_type='cuda', dtype=torch.float16):
+            with torch.autocast(device_type='cuda', dtype=torch.float16):
                 outputs = model(samples)
                 loss = criterion(outputs[0], targets[0])
                 for i in range(1, len(targets)):
@@ -311,7 +312,7 @@ def validate(config, data_loader, model, is_validation):
         for i in range(len(target)):
             # measure accuracy and record loss
             loss = criterion(output[i], target[i])
-            # acc1, acc5 = accuracy(output, target, topk=(1, 5))
+            # acc1, acc5 = accuracy(output, target, topk=(1, 5)) #https://huggingface.co/spaces/Roll20/pet_score/blob/3653888366407445408f2bfa8c68d6cdbdd4cba6/lib/timm/utils/metrics.py
             acc1 = accuracy(output[i], target[i], topk=(1,))
             acc1 = torch.Tensor(acc1).to(device='cuda')
             acc1 = reduce_tensor(acc1)
@@ -449,3 +450,20 @@ if __name__ == '__main__':
     logger.info(config.dump())
 
     main(config)
+
+
+#https://pytorch.org/docs/stable/elastic/run.html
+
+# nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
+#   --cfg configs/MAXVIT/maxvit_base_tf_224.in1k.yaml \
+#   --trainset ../data/images/ --validset ../data/images/ --testset ../data/images/ \
+#   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
+#   --batch-size 32 --output output/ --tag maxvit_224 --num_mlp_heads 3 > log.txt & disown
+
+# nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
+#   --cfg configs/MAXVIT/maxvit_base_tf_224.in1k.yaml --resume path/to/pretrain/swin_large_patch4_window7_224_22k.pth \
+#   --trainset ../data/images/ --validset ../data/images/ --testset ../data/images/ \
+#   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
+#   --batch-size 32 --output output/ --tag maxvit_224 --num_mlp_heads 3 > log.txt & disown
+
+#PID:479394

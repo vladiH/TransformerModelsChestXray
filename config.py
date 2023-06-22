@@ -181,6 +181,8 @@ _C.EVAL_MODE = False
 _C.THROUGHPUT_MODE = False
 # local rank for DistributedDataParallel, given by command line argument
 _C.LOCAL_RANK = 0
+# max checkpoints to preserve 
+_C.MAX_CHECKPOINTS = 5
 
 #nih
 _C.NIH = CN()
@@ -244,7 +246,7 @@ def update_config(config, args):
         config.THROUGHPUT_MODE = True
 
     # set local rank for distributed training
-    config.LOCAL_RANK = args.local_rank
+    config.LOCAL_RANK = int(os.environ["LOCAL_RANK"])
 
     # output folder
     config.OUTPUT = os.path.join(config.OUTPUT, config.MODEL.NAME, config.TAG)
