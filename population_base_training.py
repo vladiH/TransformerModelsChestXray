@@ -340,7 +340,7 @@ if __name__ == '__main__':
 
 
 
-# nohup python main.py \
+# nohup python population_base_training.py \
 #   --cfg configs/MAXVIT/maxvit_tiny_tf_224.in1k.yaml \
 #   --trainset ../data/images/ --validset ../data/images/ --testset ../data/images/ \
 #   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
