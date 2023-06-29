@@ -9,15 +9,74 @@ import os
 import torch
 import numpy as np
 import torch.distributed as dist
+import random
 from torchvision import datasets, transforms
 from torchvision.transforms import InterpolationMode
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from timm.data import Mixup
 from timm.data import create_transform
 
+from torch.utils.data import Subset
 from .custom_image_folder import MyImageFolder
 from .cached_image_folder import CachedImageFolder
 from .samplers import SubsetRandomSampler
+
+def build_normal_loader(config, percent):
+    config.defrost()
+    dataset_train, config.MODEL.NUM_CLASSES = build_dataset(is_train=True, config=config)
+    config.freeze()
+    (dataset_val, dataset_test), _ = build_dataset(is_train=False, config=config)
+
+
+
+    # Create a random subset of 100 elements
+    total_elements = len(dataset_train)
+    random_indices = random.sample(range(total_elements), int(total_elements*percent))
+    subset_dataset_train = Subset(dataset_train, random_indices)
+    data_loader_train = torch.utils.data.DataLoader(
+        subset_dataset_train,
+        batch_size=config.DATA.BATCH_SIZE,
+        num_workers=config.DATA.NUM_WORKERS,
+        pin_memory=config.DATA.PIN_MEMORY, #https://developer.nvidia.com/blog/how-optimize-data-transfers-cuda-cc/
+        drop_last=True,
+    )
+
+    # Create a random subset of 100 elements
+    total_elements = len(dataset_val)
+    random_indices = random.sample(range(total_elements), int(total_elements*percent))
+    subset_dataset_val = Subset(dataset_val, random_indices)
+    data_loader_val = torch.utils.data.DataLoader(
+        subset_dataset_val,
+        batch_size=config.DATA.BATCH_SIZE,
+        shuffle=False,
+        num_workers=config.DATA.NUM_WORKERS,
+        pin_memory=config.DATA.PIN_MEMORY, #https://developer.nvidia.com/blog/how-optimize-data-transfers-cuda-cc/
+        drop_last=False
+    )
+
+    # Create a random subset of 100 elements
+    total_elements = len(dataset_test)
+    random_indices = random.sample(range(total_elements), int(total_elements*percent))
+    subset_dataset_test = Subset(dataset_test, random_indices)
+    data_loader_test = torch.utils.data.DataLoader(
+        subset_dataset_test,
+        batch_size=config.DATA.BATCH_SIZE,
+        shuffle=False,
+        num_workers=config.DATA.NUM_WORKERS,
+        pin_memory=config.DATA.PIN_MEMORY,#https://developer.nvidia.com/blog/how-optimize-data-transfers-cuda-cc/
+        drop_last=False
+    )
+
+    # setup mixup / cutmix
+    mixup_fn = None
+    mixup_active = config.AUG.MIXUP > 0 or config.AUG.CUTMIX > 0. or config.AUG.CUTMIX_MINMAX is not None
+    if mixup_active:
+        mixup_fn = Mixup(
+            mixup_alpha=config.AUG.MIXUP, cutmix_alpha=config.AUG.CUTMIX, cutmix_minmax=config.AUG.CUTMIX_MINMAX,
+            prob=config.AUG.MIXUP_PROB, switch_prob=config.AUG.MIXUP_SWITCH_PROB, mode=config.AUG.MIXUP_MODE,
+            label_smoothing=config.MODEL.LABEL_SMOOTHING, num_classes=config.MODEL.NUM_CLASSES)
+
+    return dataset_train, dataset_val, dataset_test, data_loader_train, data_loader_val, data_loader_test, mixup_fn
 
 
 def build_loader(config):

@@ -193,7 +193,7 @@ _C.NIH.testset = ''
 _C.NIH.train_csv_path = ''
 _C.NIH.valid_csv_path = ''
 _C.NIH.test_csv_path = ''
-_C.NIH.num_mlp_heads = 3
+_C.NIH.num_mlp_heads = 1
 
 
 
@@ -212,63 +212,63 @@ def _update_config_from_file(config, cfg_file):
     config.freeze()
 
 
-def update_config(config, args):
+def update_config(config, args, ommit=False):
     _update_config_from_file(config, args.cfg)
+    if not ommit:
+        config.defrost()
+        if args.opts:
+            config.merge_from_list(args.opts)
 
-    config.defrost()
-    if args.opts:
-        config.merge_from_list(args.opts)
+        # merge from specific arguments
+        if args.batch_size:
+            config.DATA.BATCH_SIZE = args.batch_size
+        if args.data_path:
+            config.DATA.DATA_PATH = args.data_path
+        if args.zip:
+            config.DATA.ZIP_MODE = True
+        if args.cache_mode:
+            config.DATA.CACHE_MODE = args.cache_mode
+        if args.resume:
+            config.MODEL.RESUME = args.resume
+        if args.accumulation_steps:
+            config.TRAIN.ACCUMULATION_STEPS = args.accumulation_steps
+        if args.use_checkpoint:
+            config.TRAIN.USE_CHECKPOINT = True
+        if args.amp_opt_level:
+            config.AMP_OPT_LEVEL = args.amp_opt_level
+        if args.output:
+            config.OUTPUT = args.output
+        if args.tag:
+            config.TAG = args.tag
+        if args.eval:
+            config.EVAL_MODE = True
+        if args.throughput:
+            config.THROUGHPUT_MODE = True
 
-    # merge from specific arguments
-    if args.batch_size:
-        config.DATA.BATCH_SIZE = args.batch_size
-    if args.data_path:
-        config.DATA.DATA_PATH = args.data_path
-    if args.zip:
-        config.DATA.ZIP_MODE = True
-    if args.cache_mode:
-        config.DATA.CACHE_MODE = args.cache_mode
-    if args.resume:
-        config.MODEL.RESUME = args.resume
-    if args.accumulation_steps:
-        config.TRAIN.ACCUMULATION_STEPS = args.accumulation_steps
-    if args.use_checkpoint:
-        config.TRAIN.USE_CHECKPOINT = True
-    if args.amp_opt_level:
-        config.AMP_OPT_LEVEL = args.amp_opt_level
-    if args.output:
-        config.OUTPUT = args.output
-    if args.tag:
-        config.TAG = args.tag
-    if args.eval:
-        config.EVAL_MODE = True
-    if args.throughput:
-        config.THROUGHPUT_MODE = True
+        # set local rank for distributed training
+        config.LOCAL_RANK = int(os.environ["LOCAL_RANK"]) if "LOCAL_RANK" in os.environ else None
 
-    # set local rank for distributed training
-    config.LOCAL_RANK = int(os.environ["LOCAL_RANK"]) if "LOCAL_RANK" in os.environ else None
+        # output folder
+        config.OUTPUT = os.path.join(config.OUTPUT, config.MODEL.NAME, config.TAG)
 
-    # output folder
-    config.OUTPUT = os.path.join(config.OUTPUT, config.MODEL.NAME, config.TAG)
+        # nih
+        config.NIH.trainset = args.trainset
+        config.NIH.validset = args.validset
+        config.NIH.testset = args.testset
+        # config.NIH.class_num = args.class_num
+        config.NIH.train_csv_path = args.train_csv_path
+        config.NIH.valid_csv_path = args.valid_csv_path
+        config.NIH.test_csv_path = args.test_csv_path
+        config.NIH.num_mlp_heads = args.num_mlp_heads
 
-    # nih
-    config.NIH.trainset = args.trainset
-    config.NIH.validset = args.validset
-    config.NIH.testset = args.testset
-    # config.NIH.class_num = args.class_num
-    config.NIH.train_csv_path = args.train_csv_path
-    config.NIH.valid_csv_path = args.valid_csv_path
-    config.NIH.test_csv_path = args.test_csv_path
-    config.NIH.num_mlp_heads = args.num_mlp_heads
-
-    config.freeze()
+        config.freeze()
 
 
-def get_config(args):
+def get_config(args, ommit=False):
     """Get a yacs CfgNode object with default values."""
     # Return a clone so that the defaults will not be altered
     # This is for the "local variable" use pattern
     config = _C.clone()
-    update_config(config, args)
+    update_config(config, args, ommit)
 
     return config

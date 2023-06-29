@@ -1,1 +1,0 @@
-=> merge config from configs/MAXVIT/maxvit_tiny_tf_224.in1k.yaml

@@ -23,7 +23,9 @@ def unzip_files(source_directory: str, destination_directory: str):
             print("Skipping non-.tar.gz file:", file_name)
     print("Unzip files done")
 
-def download_all_images():
+def download_all_images(source_directory):
+    # Create the destination directory if it doesn't exist
+    os.makedirs(source_directory, exist_ok=True)
     # URLs for the zip files
     links = [
         'https://nihcc.box.com/shared/static/vfk49d74nhbxq3nqjg0900w5nvkorp5c.gz',
@@ -42,12 +44,13 @@ def download_all_images():
 
     for idx, link in enumerate(links):
         fn = 'images_%02d.tar.gz' % (idx+1)
+        download_path = os.path.join(source_directory, fn)
         print ('downloading', fn, '...')
-        urllib.request.urlretrieve(link, fn)  # download the zip file
+        urllib.request.urlretrieve(link, download_path)  # download the zip file
     print ("Download complete. Please check the checksums")
 
 if __name__ == '__main__':
-    source_directory = "./"
-    destination_directory = "./"
-    download_all_images()
+    source_directory = "../../data/"
+    destination_directory = "../../data/"
+    download_all_images(source_directory)
     unzip_files(source_directory, destination_directory)
