@@ -113,7 +113,7 @@ def main(config):
     else:
         criterion = torch.nn.CrossEntropyLoss()
 
-    max_accuracy = 0.0
+    max_auc = 0.0
     min_loss = np.inf
     if config.TRAIN.AUTO_RESUME:
         resume_file = auto_resume_helper(config.OUTPUT)
@@ -128,12 +128,14 @@ def main(config):
             logger.info(f'no checkpoint found in {config.OUTPUT}, ignoring auto resume')
 
     if config.MODEL.RESUME:
-        max_accuracy, min_loss = load_checkpoint(config, model_without_ddp, optimizer, lr_scheduler, logger, scaler)
-        acc1, acc5, loss = validate(config, data_loader_val, model, is_validation=True)
+        max_auc, min_loss = load_checkpoint(config, model_without_ddp, optimizer, lr_scheduler, logger, scaler)
+        acc1, acc5, auc, loss = validate(config, data_loader_val, model, is_validation=True)
         logger.info(f"Mean Accuracy of the network on the {len(dataset_val)} validation images: {acc1:.2f}%")
+        logger.info(f"Mean AUC of the network on the {len(dataset_val)} validation images: {auc:.2f}%")
         logger.info(f"Mean Loss of the network on the {len(dataset_val)} validation images: {loss:.5f}")
-        acc1, acc5, loss = validate(config, data_loader_test, model, is_validation=False)
+        acc1, acc5, auc, loss = validate(config, data_loader_test, model, is_validation=False)
         logger.info(f"Mean Accuracy of the network on the {len(dataset_test)} test images: {acc1:.2f}%")
+        logger.info(f"Mean AUC of the network on the {len(dataset_test)} test images: {auc:.2f}%")
         logger.info(f"Mean Loss of the network on the {len(dataset_test)} test images: {loss:.5f}")
         if config.EVAL_MODE:
             return
@@ -149,8 +151,8 @@ def main(config):
         best_epoch = config.TRAIN.START_EPOCH
         no_improvement_epochs = 0
         max_no_improvement_epochs = config.TRAIN.EARLYSTOPPING.PATIENCE
-        if config.TRAIN.EARLYSTOPPING.MONITOR == "acc":
-            monitor = max_accuracy
+        if config.TRAIN.EARLYSTOPPING.MONITOR == "auc":
+            monitor = max_auc
         else:
             monitor = min_loss
 
@@ -160,20 +162,22 @@ def main(config):
 
         train_one_epoch(config, model, criterion, data_loader_train, optimizer, epoch, mixup_fn, lr_scheduler, scaler)
         
-        acc1, acc5, loss = validate(config, data_loader_val, model, is_validation=True)
+        acc1, acc5, auc, loss = validate(config, data_loader_val, model, is_validation=True)
         logger.info(f"Mean Accuracy of the network on the {len(dataset_val)} validation images: {acc1:.2f}%")
+        logger.info(f"Mean AUC of the network on the {len(dataset_val)} validation images: {auc:.2f}%")
         logger.info(f"Mean Loss of the network on the {len(dataset_val)} validation images: {loss:.5f}")
         
         if config.TRAIN.EARLYSTOPPING.MONITOR is not None:
-            has_improved, value = early_stopping(config.TRAIN.EARLYSTOPPING.MONITOR, acc1, loss, monitor)
+            has_improved, value = early_stopping(config.TRAIN.EARLYSTOPPING.MONITOR, auc, loss, monitor)
             if has_improved:
                 monitor = value
                 best_epoch = epoch
                 no_improvement_epochs = 0
                 if dist.get_rank() == 0:
-                    save_checkpoint(config, epoch, model_without_ddp, max_accuracy, min_loss, optimizer, lr_scheduler, logger, scaler)
+                    save_checkpoint(config, epoch, model_without_ddp, max_auc, min_loss, optimizer, lr_scheduler, logger, scaler)
             else:
-                no_improvement_epochs += 1
+                if config.TRAIN.WARMUP_EPOCHS<=epoch:
+                    no_improvement_epochs += 1
 
             if no_improvement_epochs >= max_no_improvement_epochs:
                 logger.info(f"No improvement in validation {config.TRAIN.EARLYSTOPPING.MONITOR} \n"
@@ -181,14 +185,15 @@ def main(config):
                 break
         else:
             if dist.get_rank() == 0 and (epoch % config.SAVE_FREQ == 0 or epoch == (config.TRAIN.EPOCHS - 1)):
-                save_checkpoint(config, epoch, model_without_ddp, max_accuracy, min_loss, optimizer, lr_scheduler, logger, scaler)
+                save_checkpoint(config, epoch, model_without_ddp, max_auc, min_loss, optimizer, lr_scheduler, logger, scaler)
 
-        acc1, acc5, loss = validate(config, data_loader_test, model, is_validation=False)
+        acc1, acc5, auc, loss = validate(config, data_loader_test, model, is_validation=False)
         logger.info(f"Mean Accuracy of the network on the {len(dataset_test)} test images: {acc1:.2f}%")
+        logger.info(f"Mean AUC of the network on the {len(dataset_test)} test images: {auc:.2f}%")
         logger.info(f"Mean Loss of the network on the {len(dataset_test)} test images: {loss:.5f}")
-        max_accuracy = max(max_accuracy, acc1)
+        max_auc = max(max_auc, auc)
         min_loss = min(min_loss, loss)
-        logger.info(f'Test Max mean accuracy: {max_accuracy:.2f}%')
+        logger.info(f'Test Max mean AUC: {max_auc:.2f}%')
 
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
@@ -206,6 +211,7 @@ def train_one_epoch(config, model, criterion, data_loader, optimizer, epoch, mix
 
     start = time.time()
     end = time.time()
+    grad_norm = 0.0
     for idx, (samples, targets) in enumerate(data_loader):
         samples = samples.cuda(non_blocking=True)
         for i in range(len(targets)):
@@ -223,12 +229,13 @@ def train_one_epoch(config, model, criterion, data_loader, optimizer, epoch, mix
                 loss = loss / config.TRAIN.ACCUMULATION_STEPS
             # Accumulates scaled gradients.
             scaler.scale(loss).backward()
-            if config.TRAIN.CLIP_GRAD:
-                scaler.unscale_(optimizer)
-                grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), config.TRAIN.CLIP_GRAD)
-            else:
-                grad_norm = get_grad_norm(model.parameters())
+            
             if (idx + 1) % config.TRAIN.ACCUMULATION_STEPS == 0:
+                scaler.unscale_(optimizer)
+                if config.TRAIN.CLIP_GRAD:
+                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), config.TRAIN.CLIP_GRAD)
+                else:
+                    grad_norm = get_grad_norm(model.parameters())
                 scaler.step(optimizer)
                 scaler.update()
                 optimizer.zero_grad()
@@ -369,7 +376,7 @@ def validate(config, data_loader, model, is_validation):
     from statistics import mean
     logger.info(f'{valid_or_test} MEAN AUC: {mean(aucs):.5f}')
 
-    return mean(acc1s), mean(acc5s), mean(losses)
+    return mean(acc1s), mean(acc5s), mean(aucs), mean(losses)
 
 
 @torch.no_grad()
@@ -391,10 +398,10 @@ def throughput(data_loader, model, logger):
         logger.info(f"batch_size {batch_size} throughput {30 * batch_size / (tic2 - tic1)}")
         return
 
-def early_stopping(monitor, monitor_acc, monitor_loss,  monitor_previus_value):
-    if monitor == 'acc':
-        if monitor_acc > monitor_previus_value:
-            return True, monitor_acc
+def early_stopping(monitor, monitor_auc, monitor_loss,  monitor_previus_value):
+    if monitor == 'auc':
+        if monitor_auc > monitor_previus_value:
+            return True, monitor_auc
     if monitor == 'loss':
         if monitor_loss < monitor_previus_value:
             return True, monitor_loss
@@ -455,10 +462,10 @@ if __name__ == '__main__':
 #https://pytorch.org/docs/stable/elastic/run.html
 
 # nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
-#   --cfg configs/MAXVIT/maxvit_base_tf_224.in1k.yaml \
+#   --cfg configs/MAXVIT/maxvit_large_tf_224.in1k.yaml \
 #   --trainset ../data/images/ --validset ../data/images/ --testset ../data/images/ \
 #   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
-#   --batch-size 32 --output output/ --tag maxvit_224 --num_mlp_heads 3 > log.txt & disown
+#   --batch-size 32 --output output/ --tag in1kl --num_mlp_heads 3 > log.txt & disown
 
 # nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
 #   --cfg configs/MAXVIT/maxvit_base_tf_224.in1k.yaml --resume path/to/pretrain/swin_large_patch4_window7_224_22k.pth \
@@ -466,4 +473,4 @@ if __name__ == '__main__':
 #   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
 #   --batch-size 32 --output output/ --tag maxvit_224 --num_mlp_heads 3 > log.txt & disown
 
-#PID:479394
+#PID:1403019

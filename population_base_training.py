@@ -58,21 +58,21 @@ def parse_option():
     return args, config
 
 
-def main(config, num_samples=4, gpus_per_trial=1):
+def main(config, num_samples=3, gpus_per_trial=1):
     scheduler = PopulationBasedTraining(
         time_attr= "training_iteration",
         perturbation_interval=2,
         metric="loss",
         mode="min",
         hyperparam_mutations={
-            "weight_decay": tune.uniform(0.0, 1e-3),
+            "weight_decay": tune.uniform(0.0, 0.3),
             "base_lr": tune.loguniform(1e-4, 1e-1),
             "batch_size": [16, 32],
             "auto_augment": [2, 4, 6, 8]
         })
 
     pbt_config = {
-        "weight_decay": tune.uniform(0.0, 1e-3),
+        "weight_decay": tune.choice([0.0, 0.5, 0.05, 0.005]),
         "base_lr": tune.loguniform(1e-4, 1e-1),
         "batch_size": tune.choice([16, 32]),
         "auto_augment": tune.choice([2, 4, 6, 8])
@@ -107,11 +107,6 @@ def main(config, num_samples=4, gpus_per_trial=1):
     print(f"Best trial final validation acc: {best_trial.last_result['acc']}")
     print(f"Best trial final validation auc: {best_trial.last_result['auc']}")
     print(f"Best trial final validation loss: {best_trial.last_result['loss']}")
-
-    print(f"Best trial final weight_decay: {best_trial.conig['weight_decay']}")
-    print(f"Best trial final base_lr: {best_trial.conig['base_lr']}")
-    print(f"Best trial final batch_size: {best_trial.conig['batch_size']}")
-    print(f"Best trial final auto_augment: {best_trial.conig['auto_augment']}")
 
     # best_trained_model = Net(best_trial.config["l1"], best_trial.config["l2"])
     # device = "cpu"
@@ -318,4 +313,5 @@ if __name__ == '__main__':
 
 
 # nohup python population_base_training.py \
-#   --cfg configs/MAXVIT/maxvit_tiny_tf_224.in1k.yaml > log.txt & disown
+#   --cfg configs/MAXVIT/maxvit_small_tf_224.in1k.yaml > log.txt & disown
+#1103242

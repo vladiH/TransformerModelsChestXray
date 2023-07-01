@@ -19,7 +19,7 @@ _C.BASE = ['']
 # -----------------------------------------------------------------------------
 _C.DATA = CN()
 # Batch size for a single GPU, could be overwritten by command line argument
-_C.DATA.BATCH_SIZE = 128
+_C.DATA.BATCH_SIZE = 32
 # Path to dataset, could be overwritten by command line argument
 _C.DATA.DATA_PATH = ''
 # Dataset name
@@ -37,7 +37,7 @@ _C.DATA.CACHE_MODE = 'part'
 # Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.
 _C.DATA.PIN_MEMORY = True
 # Number of data loading threads
-_C.DATA.NUM_WORKERS = 2
+_C.DATA.NUM_WORKERS = 16
 
 # -----------------------------------------------------------------------------
 # Model settings
@@ -83,8 +83,8 @@ _C.TRAIN = CN()
 _C.TRAIN.START_EPOCH = 0
 _C.TRAIN.EPOCHS = 300
 _C.TRAIN.WARMUP_EPOCHS = 20
-_C.TRAIN.WEIGHT_DECAY = 0.05
-_C.TRAIN.BASE_LR = 5e-4
+_C.TRAIN.WEIGHT_DECAY = 0.08 #0.05
+_C.TRAIN.BASE_LR = 0.00397 #5e-4
 _C.TRAIN.WARMUP_LR = 5e-7
 _C.TRAIN.MIN_LR = 5e-6
 # Clip gradient norm
@@ -109,9 +109,9 @@ _C.TRAIN.LR_SCHEDULER.DECAY_RATE = 0.1
 #Early stopping,
 _C.TRAIN.EARLYSTOPPING = CN()
 
-#acc, loss or None
-_C.TRAIN.EARLYSTOPPING.MONITOR = 'loss'
-_C.TRAIN.EARLYSTOPPING.PATIENCE = 5
+#auc, loss or None
+_C.TRAIN.EARLYSTOPPING.MONITOR = 'auc'
+_C.TRAIN.EARLYSTOPPING.PATIENCE = 7
 
 # Optimizer
 _C.TRAIN.OPTIMIZER = CN()
@@ -130,7 +130,7 @@ _C.AUG = CN()
 # Color jitter factor
 _C.AUG.COLOR_JITTER = 0.4
 # Use AutoAugment policy. "v0" or "original"
-_C.AUG.AUTO_AUGMENT = 'rand-m9-mstd0.5-inc1'
+_C.AUG.AUTO_AUGMENT = 'rand-m6-mstd0.5-inc1' #'rand-m9-mstd0.5-inc1'
 # Random erase prob
 _C.AUG.REPROB = 0.25
 # Random erase mode
@@ -182,7 +182,7 @@ _C.THROUGHPUT_MODE = False
 # local rank for DistributedDataParallel, given by command line argument
 _C.LOCAL_RANK = 0
 # max checkpoints to preserve 
-_C.MAX_CHECKPOINTS = 5
+_C.MAX_CHECKPOINTS = 3
 
 #nih
 _C.NIH = CN()
@@ -193,7 +193,7 @@ _C.NIH.testset = ''
 _C.NIH.train_csv_path = ''
 _C.NIH.valid_csv_path = ''
 _C.NIH.test_csv_path = ''
-_C.NIH.num_mlp_heads = 1
+_C.NIH.num_mlp_heads = 3
 
 
 

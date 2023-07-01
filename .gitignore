@@ -133,3 +133,5 @@ dmypy.json
 
 #.pth files
 *.pth
+ray_results/
+output/
