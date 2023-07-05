@@ -55,7 +55,7 @@ def parse_option():
     parser.add_argument('--accumulation-steps', type=int, help="gradient accumulation steps")
     parser.add_argument('--use-checkpoint', action='store_true',
                         help="whether to use gradient checkpointing to save memory")
-    parser.add_argument('--amp-opt-level', type=bool, default=True,
+    parser.add_argument('--amp-opt-level', action='store_true',
                         help='mixed precision opt level, if False, no amp is used')
     parser.add_argument('--output', default='output', type=str, metavar='PATH',
                         help='root of output folder, the full path is <output>/<model_name>/<tag> (default: output)')
@@ -462,10 +462,10 @@ if __name__ == '__main__':
 #https://pytorch.org/docs/stable/elastic/run.html
 
 # nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
-#   --cfg configs/MAXVIT/maxvit_large_tf_224.in1k.yaml \
+#   --cfg configs/MAXVIT/maxvit_large_tf_384.in21k.yaml \
 #   --trainset ../data/images/ --validset ../data/images/ --testset ../data/images/ \
 #   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
-#   --batch-size 32 --output output/ --tag in1kl --num_mlp_heads 3 > log.txt & disown
+#   --batch-size 8 --output output/ --tag in21k --num_mlp_heads 3 --accumulation-steps 4 --amp-opt-level False > log.txt & disown
 
 # nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
 #   --cfg configs/MAXVIT/maxvit_base_tf_224.in1k.yaml --resume path/to/pretrain/swin_large_patch4_window7_224_22k.pth \
@@ -473,4 +473,4 @@ if __name__ == '__main__':
 #   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
 #   --batch-size 32 --output output/ --tag maxvit_224 --num_mlp_heads 3 > log.txt & disown
 
-#PID:1403019
+#PID:1452597

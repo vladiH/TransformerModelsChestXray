@@ -102,7 +102,7 @@ _C.TRAIN.USE_CHECKPOINT = False
 _C.TRAIN.LR_SCHEDULER = CN()
 _C.TRAIN.LR_SCHEDULER.NAME = 'cosine'
 # Epoch interval to decay LR, used in StepLRScheduler
-_C.TRAIN.LR_SCHEDULER.DECAY_EPOCHS = 30
+_C.TRAIN.LR_SCHEDULER.DECAY_EPOCHS = 25
 # LR decay rate, used in StepLRScheduler
 _C.TRAIN.LR_SCHEDULER.DECAY_RATE = 0.1
 
@@ -111,7 +111,7 @@ _C.TRAIN.EARLYSTOPPING = CN()
 
 #auc, loss or None
 _C.TRAIN.EARLYSTOPPING.MONITOR = 'auc'
-_C.TRAIN.EARLYSTOPPING.PATIENCE = 7
+_C.TRAIN.EARLYSTOPPING.PATIENCE = 8
 
 # Optimizer
 _C.TRAIN.OPTIMIZER = CN()
@@ -164,7 +164,7 @@ _C.TEST.CROP = True
 # -----------------------------------------------------------------------------
 # Mixed precision opt level, if False, no amp is used
 # overwritten by command line argument
-_C.AMP_OPT_LEVEL = True
+_C.AMP_OPT_LEVEL = False
 # Path to output folder, overwritten by command line argument
 _C.OUTPUT = ''
 # Tag of experiment, overwritten by command line argument
@@ -235,7 +235,7 @@ def update_config(config, args, ommit=False):
         if args.use_checkpoint:
             config.TRAIN.USE_CHECKPOINT = True
         if args.amp_opt_level:
-            config.AMP_OPT_LEVEL = args.amp_opt_level
+            config.AMP_OPT_LEVEL = True
         if args.output:
             config.OUTPUT = args.output
         if args.tag:

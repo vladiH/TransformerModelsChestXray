@@ -1,0 +1,5 @@
+DATA:
+  IMG_SIZE: 224
+MODEL:
+  TYPE: maxvit
+  NAME: maxvit_base_tf_224.in21k_ft_in1k
