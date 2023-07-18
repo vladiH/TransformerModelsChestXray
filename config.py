@@ -83,12 +83,12 @@ _C.TRAIN = CN()
 _C.TRAIN.START_EPOCH = 0
 _C.TRAIN.EPOCHS = 300
 _C.TRAIN.WARMUP_EPOCHS = 20
-_C.TRAIN.WEIGHT_DECAY = 0.08 #0.05
-_C.TRAIN.BASE_LR = 0.00397 #5e-4
+_C.TRAIN.WEIGHT_DECAY = 0.05
+_C.TRAIN.BASE_LR = 5e-4
 _C.TRAIN.WARMUP_LR = 5e-7
 _C.TRAIN.MIN_LR = 5e-6
 # Clip gradient norm
-_C.TRAIN.CLIP_GRAD = 5.0
+_C.TRAIN.CLIP_GRAD = 1.0
 # Auto resume from latest checkpoint
 _C.TRAIN.AUTO_RESUME = True
 # Gradient accumulation steps
@@ -111,7 +111,7 @@ _C.TRAIN.EARLYSTOPPING = CN()
 
 #auc, loss or None
 _C.TRAIN.EARLYSTOPPING.MONITOR = 'auc'
-_C.TRAIN.EARLYSTOPPING.PATIENCE = 8
+_C.TRAIN.EARLYSTOPPING.PATIENCE = 10
 
 # Optimizer
 _C.TRAIN.OPTIMIZER = CN()
@@ -128,11 +128,11 @@ _C.TRAIN.OPTIMIZER.MOMENTUM = 0.9
 # -----------------------------------------------------------------------------
 _C.AUG = CN()
 # Color jitter factor
-_C.AUG.COLOR_JITTER = 0.4
+_C.AUG.COLOR_JITTER = 0.0#0.4
 # Use AutoAugment policy. "v0" or "original"
-_C.AUG.AUTO_AUGMENT = 'rand-m6-mstd0.5-inc1' #'rand-m9-mstd0.5-inc1'
+_C.AUG.AUTO_AUGMENT = 'none' #'rand-m6-mstd0.5-inc1' #'rand-m9-mstd0.5-inc1'
 # Random erase prob
-_C.AUG.REPROB = 0.25
+_C.AUG.REPROB = 0.25#0.25
 # Random erase mode
 _C.AUG.REMODE = 'pixel'
 # Random erase count

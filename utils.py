@@ -31,7 +31,8 @@ def load_checkpoint(config, model, optimizer, lr_scheduler, logger, scaler):
     min_loss = np.inf
     if not config.EVAL_MODE and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
         optimizer.load_state_dict(checkpoint['optimizer'])
-        lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+        if checkpoint['lr_scheduler'] is not None:
+            lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
         config.defrost()
         config.TRAIN.START_EPOCH = checkpoint['epoch'] + 1
         config.freeze()
@@ -51,7 +52,7 @@ def load_checkpoint(config, model, optimizer, lr_scheduler, logger, scaler):
 def save_checkpoint(config, epoch, model, max_auc, min_loss, optimizer, lr_scheduler, logger, scaler):
     save_state = {'model': model.state_dict(),
                   'optimizer': optimizer.state_dict(),
-                  'lr_scheduler': lr_scheduler.state_dict(),
+                  'lr_scheduler': lr_scheduler.state_dict() if lr_scheduler is not None else None,
                   'max_auc': max_auc,
                   'min_loss': min_loss,
                   'epoch': epoch,

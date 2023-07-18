@@ -15,6 +15,7 @@ from torchvision.transforms import InterpolationMode
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from timm.data import Mixup
 from timm.data import create_transform
+from PIL import ImageEnhance
 
 from torch.utils.data import Subset
 from .custom_image_folder import MyImageFolder
@@ -159,25 +160,50 @@ def build_dataset(is_train, config):
 
     return dataset, nb_classes
 
+# Custom transformations
+def apply_custom_transforms(image):
+    # Sharpening
+    enhancer = ImageEnhance.Sharpness(image)
+    sharpened_image = enhancer.enhance(random.uniform(0.5, 1.5))
+    return sharpened_image
 
 def build_transform(is_train, config):
     resize_im = config.DATA.IMG_SIZE > 32
     if is_train:
-        # this should always dispatch to transforms_imagenet_train
-        transform = create_transform(
-            input_size=config.DATA.IMG_SIZE,
-            is_training=True,
-            color_jitter=config.AUG.COLOR_JITTER if config.AUG.COLOR_JITTER > 0 else None,
-            auto_augment=config.AUG.AUTO_AUGMENT if config.AUG.AUTO_AUGMENT != 'none' else None,
-            re_prob=config.AUG.REPROB,
-            re_mode=config.AUG.REMODE,
-            re_count=config.AUG.RECOUNT,
-            interpolation=config.DATA.INTERPOLATION,
-        )
+        if config.AUG.AUTO_AUGMENT!='none':
+            # this should always dispatch to transforms_imagenet_train
+            transform = create_transform(
+                input_size=config.DATA.IMG_SIZE,
+                is_training=True,
+                color_jitter=config.AUG.COLOR_JITTER if config.AUG.COLOR_JITTER > 0 else None,
+                auto_augment=config.AUG.AUTO_AUGMENT if config.AUG.AUTO_AUGMENT != 'none' else None,
+                re_prob=config.AUG.REPROB,
+                re_mode=config.AUG.REMODE,
+                re_count=config.AUG.RECOUNT,
+                interpolation=config.DATA.INTERPOLATION,
+            )
+        else:
+            transform = transforms.Compose([
+                transforms.RandomResizedCrop(size=config.DATA.IMG_SIZE, scale=(0.8, 1.0), ratio=(0.75, 1.3333), interpolation=get_interpolation_mode(config.DATA.INTERPOLATION)),
+                transforms.RandomApply([transforms.RandomRotation(degrees=(10, 175), interpolation=get_interpolation_mode(config.DATA.INTERPOLATION)),
+                                        transforms.RandomHorizontalFlip(p=0.5), 
+                                        # transforms.RandomVerticalFlip(p=0.5), 
+                                        transforms.RandomAffine(degrees=(15, 15), translate=(0.1, 0.3), scale=(0.8, 1.0), interpolation=get_interpolation_mode(config.DATA.INTERPOLATION)),
+                                        transforms.RandomPerspective(distortion_scale=0.35, p=0.5, interpolation=get_interpolation_mode(config.DATA.INTERPOLATION)),
+                                        transforms.GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 5)),
+                                        transforms.RandomAutocontrast(p=0.5),
+                                        transforms.RandomAdjustSharpness(sharpness_factor=2, p=0.5),
+                                        ], p=0.5),
+                transforms.ToTensor(),
+                transforms.RandomApply([apply_noise], p=0.25),
+                transforms.RandomErasing(p=config.AUG.REPROB, scale=(0.02,0.02), inplace=True),
+                transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD)
+            ])
         if not resize_im:
             # replace RandomResizedCropAndInterpolation with
             # RandomCrop
             transform.transforms[0] = transforms.RandomCrop(config.DATA.IMG_SIZE, padding=4)
+        
         return transform
 
     t = []
@@ -210,3 +236,46 @@ def get_interpolation_mode(text):
         return InterpolationMode.NEAREST
     else:
         raise ValueError("Invalid interpolation mode: " + text)
+
+# Custom transformations
+# def apply_rotation(image):
+#     angle = random.uniform(-10, 10)
+#     return transforms.transforms.F.rotate(image, angle, fill=0)
+
+# def apply_flip(image):
+#     if random.random() < 0.5:
+#         return transforms.transforms.F.hflip(image)
+#     return image
+
+# def apply_shift(image):
+#     shift_x = random.uniform(-10, 10)
+#     shift_y = random.uniform(-10, 10)
+#     return transforms.transforms.F.affine(image, angle=0, translate=(shift_x, shift_y), scale=1, shear=0, fill=0)
+
+# def apply_zoom(image):
+#     zoom_factor = random.uniform(0.8, 1.2)
+#     return transforms.transforms.F.resize(image, size=int(image.width * zoom_factor), interpolation=InterpolationMode.BICUBIC)
+
+# def apply_shear(image):
+#     shear_x = random.uniform(-0.2, 0.2)
+#     shear_y = random.uniform(-0.2, 0.2)
+#     return transforms.transforms.F.affine(image, angle=0, translate=(0, 0), scale=1, shear=(shear_x, shear_y), fill=0)
+
+def apply_noise(image):
+    noise = torch.randn_like(image) * 0.01
+    return image + noise
+
+# def apply_gaussian_filter(image):
+#     return transforms.transforms.F.gaussian_blur(image, kernel_size=3)
+
+# def apply_contrast(image):
+#     contrast_factor = random.uniform(0.8, 1.2)
+#     return transforms.transforms.F.adjust_contrast(image, contrast_factor)
+
+# def apply_brightness(image):
+#     brightness_factor = random.uniform(0.8, 1.2)
+#     return transforms.transforms.F.adjust_brightness(image, brightness_factor)
+
+# def apply_sharpening(image):
+#     sharpened_image = transforms.transforms.F.adjust_sharpness(image, 2.0)
+#     return sharpened_image

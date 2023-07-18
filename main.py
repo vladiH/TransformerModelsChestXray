@@ -176,7 +176,7 @@ def main(config):
                 if dist.get_rank() == 0:
                     save_checkpoint(config, epoch, model_without_ddp, max_auc, min_loss, optimizer, lr_scheduler, logger, scaler)
             else:
-                if config.TRAIN.WARMUP_EPOCHS<=epoch:
+                if config.TRAIN.WARMUP_EPOCHS<epoch:
                     no_improvement_epochs += 1
 
             if no_improvement_epochs >= max_no_improvement_epochs:
@@ -221,7 +221,7 @@ def train_one_epoch(config, model, criterion, data_loader, optimizer, epoch, mix
             samples, targets = mixup_fn(samples, targets)   #todo iterate on targets
 
         if config.TRAIN.ACCUMULATION_STEPS > 1:
-            with torch.autocast(device_type='cuda', dtype=torch.float16):
+            with torch.autocast(device_type='cuda', dtype=torch.float16, enabled=config.AMP_OPT_LEVEL):
                 outputs = model(samples)
                 loss = criterion(outputs[0], targets[0])
                 for i in range(1, len(targets)):
@@ -239,9 +239,10 @@ def train_one_epoch(config, model, criterion, data_loader, optimizer, epoch, mix
                 scaler.step(optimizer)
                 scaler.update()
                 optimizer.zero_grad()
-                lr_scheduler.step_update(epoch * num_steps + idx)
+                if lr_scheduler is not None:
+                    lr_scheduler.step_update(epoch * num_steps + idx)
         else:
-            with torch.autocast(device_type='cuda', dtype=torch.float16):
+            with torch.autocast(device_type='cuda', dtype=torch.float16, enabled=config.AMP_OPT_LEVEL):
                 outputs = model(samples)
                 loss = criterion(outputs[0], targets[0])
                 for i in range(1, len(targets)):
@@ -256,7 +257,8 @@ def train_one_epoch(config, model, criterion, data_loader, optimizer, epoch, mix
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad()
-            lr_scheduler.step_update(epoch * num_steps + idx)
+            if lr_scheduler is not None:
+                lr_scheduler.step_update(epoch * num_steps + idx)
 
         torch.cuda.synchronize()
 
@@ -462,10 +464,16 @@ if __name__ == '__main__':
 #https://pytorch.org/docs/stable/elastic/run.html
 
 # nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
-#   --cfg configs/MAXVIT/maxvit_large_tf_384.in21k.yaml \
+#   --cfg configs/MAXVIT/maxvit_tiny_tf_224.in1k.yaml \
 #   --trainset ../data/images/ --validset ../data/images/ --testset ../data/images/ \
 #   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
-#   --batch-size 8 --output output/ --tag in21k --num_mlp_heads 3 --accumulation-steps 4 --amp-opt-level False > log.txt & disown
+#   --batch-size 32 --output output/ --tag noAmp --num_mlp_heads 0 > log.txt & disown
+
+# nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
+#   --cfg configs/MAXVIT/maxvit_base_tf_384.in21k.yaml \
+#   --trainset ../data/images/ --validset ../data/images/ --testset ../data/images/ \
+#   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
+#   --batch-size 16 --output output/ --tag paper --num_mlp_heads 3 --accumulation-steps 2 --amp-opt-level > log.txt & disown
 
 # nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
 #   --cfg configs/MAXVIT/maxvit_base_tf_224.in1k.yaml --resume path/to/pretrain/swin_large_patch4_window7_224_22k.pth \
