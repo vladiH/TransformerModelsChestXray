@@ -181,23 +181,26 @@ def build_transform(is_train, config):
                 re_mode=config.AUG.REMODE,
                 re_count=config.AUG.RECOUNT,
                 interpolation=config.DATA.INTERPOLATION,
+                scale=(0.75, 1.0),
+                # ratio=(0.75, 1.33333),
             )
+            transform.transforms.append(transforms.RandomApply([apply_noise], p=0.10))
         else:
             transform = transforms.Compose([
-                transforms.RandomResizedCrop(size=config.DATA.IMG_SIZE, scale=(0.8, 1.0), ratio=(0.75, 1.3333), interpolation=get_interpolation_mode(config.DATA.INTERPOLATION)),
+                transforms.RandomResizedCrop(size=config.DATA.IMG_SIZE, scale=(0.7, 1.3), ratio=(0.75, 1.3333), interpolation=get_interpolation_mode(config.DATA.INTERPOLATION)),
                 transforms.RandomApply([transforms.RandomRotation(degrees=(10, 175), interpolation=get_interpolation_mode(config.DATA.INTERPOLATION)),
                                         transforms.RandomHorizontalFlip(p=0.5), 
                                         # transforms.RandomVerticalFlip(p=0.5), 
-                                        transforms.RandomAffine(degrees=(15, 15), translate=(0.1, 0.3), scale=(0.8, 1.0), interpolation=get_interpolation_mode(config.DATA.INTERPOLATION)),
+                                        transforms.RandomAffine(degrees=(15, 15), translate=(0.1, 0.3), scale=(0.8, 1.3333), interpolation=get_interpolation_mode(config.DATA.INTERPOLATION)),
                                         transforms.RandomPerspective(distortion_scale=0.35, p=0.5, interpolation=get_interpolation_mode(config.DATA.INTERPOLATION)),
                                         transforms.GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 5)),
                                         transforms.RandomAutocontrast(p=0.5),
                                         transforms.RandomAdjustSharpness(sharpness_factor=2, p=0.5),
                                         ], p=0.5),
                 transforms.ToTensor(),
-                transforms.RandomApply([apply_noise], p=0.25),
+                transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD),
                 transforms.RandomErasing(p=config.AUG.REPROB, scale=(0.02,0.02), inplace=True),
-                transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD)
+                transforms.RandomApply([apply_noise], p=0.25),
             ])
         if not resize_im:
             # replace RandomResizedCropAndInterpolation with
@@ -261,9 +264,11 @@ def get_interpolation_mode(text):
 #     shear_y = random.uniform(-0.2, 0.2)
 #     return transforms.transforms.F.affine(image, angle=0, translate=(0, 0), scale=1, shear=(shear_x, shear_y), fill=0)
 
-def apply_noise(image):
-    noise = torch.randn_like(image) * 0.01
-    return image + noise
+def apply_noise(image_tensor, mean=0, std=0.1):
+    noise = torch.randn_like(image_tensor) * std + mean
+    # noisy_image_tensor = torch.clamp(image_tensor + noise, min=0, max=1)
+    noisy_image_tensor = image_tensor + noise
+    return noisy_image_tensor
 
 # def apply_gaussian_filter(image):
 #     return transforms.transforms.F.gaussian_blur(image, kernel_size=3)

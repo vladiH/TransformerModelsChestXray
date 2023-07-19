@@ -82,7 +82,7 @@ _C.MODEL.MAXVIT.IN_CHANS = 3
 _C.TRAIN = CN()
 _C.TRAIN.START_EPOCH = 0
 _C.TRAIN.EPOCHS = 300
-_C.TRAIN.WARMUP_EPOCHS = 20
+_C.TRAIN.WARMUP_EPOCHS = 30
 _C.TRAIN.WEIGHT_DECAY = 0.05
 _C.TRAIN.BASE_LR = 5e-4
 _C.TRAIN.WARMUP_LR = 5e-7
@@ -102,7 +102,7 @@ _C.TRAIN.USE_CHECKPOINT = False
 _C.TRAIN.LR_SCHEDULER = CN()
 _C.TRAIN.LR_SCHEDULER.NAME = 'cosine'
 # Epoch interval to decay LR, used in StepLRScheduler
-_C.TRAIN.LR_SCHEDULER.DECAY_EPOCHS = 25
+_C.TRAIN.LR_SCHEDULER.DECAY_EPOCHS = 30
 # LR decay rate, used in StepLRScheduler
 _C.TRAIN.LR_SCHEDULER.DECAY_RATE = 0.1
 
@@ -130,9 +130,9 @@ _C.AUG = CN()
 # Color jitter factor
 _C.AUG.COLOR_JITTER = 0.0#0.4
 # Use AutoAugment policy. "v0" or "original"
-_C.AUG.AUTO_AUGMENT = 'none' #'rand-m6-mstd0.5-inc1' #'rand-m9-mstd0.5-inc1'
+_C.AUG.AUTO_AUGMENT = 'rand-m9-mstd0.5-inc1' #'rand-m6-mstd0.5-inc1' #'rand-m9-mstd0.5-inc1'
 # Random erase prob
-_C.AUG.REPROB = 0.25#0.25
+_C.AUG.REPROB = 0.25
 # Random erase mode
 _C.AUG.REMODE = 'pixel'
 # Random erase count
