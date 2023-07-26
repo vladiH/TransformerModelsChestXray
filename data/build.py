@@ -11,6 +11,8 @@ import numpy as np
 import torch.distributed as dist
 import random
 from torchvision import datasets, transforms
+from timm.data.auto_augment import rand_augment_transform
+from timm.data import transforms as timm_transforms
 from torchvision.transforms import InterpolationMode
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from timm.data import Mixup
@@ -21,6 +23,34 @@ from torch.utils.data import Subset
 from .custom_image_folder import MyImageFolder
 from .cached_image_folder import CachedImageFolder
 from .samplers import SubsetRandomSampler
+
+_RAND_TRANSFORMS = [
+    # 'AutoContrast',
+    'Equalize',
+    # 'Invert',
+    'Rotate',
+    # 'Posterize',
+    # 'PosterizeIncreasing',
+    # 'PosterizeOriginal',
+    'Solarize',
+    'SolarizeIncreasing',
+    # 'SolarizeAdd',
+    # 'Color',
+    # 'ColorIncreasing',
+    'Contrast',
+    'ContrastIncreasing',
+    'Brightness',
+    'BrightnessIncreasing',
+    # 'Sharpness',
+    # 'SharpnessIncreasing',
+    'ShearX',
+    'ShearY',
+    'TranslateXRel',
+    'TranslateYRel',
+    # 'Desaturate',
+    'GaussianBlur',
+    # 'GaussianBlurRand',
+]
 
 def build_normal_loader(config, percent):
     config.defrost()
@@ -160,17 +190,21 @@ def build_dataset(is_train, config):
 
     return dataset, nb_classes
 
-# Custom transformations
-def apply_custom_transforms(image):
-    # Sharpening
-    enhancer = ImageEnhance.Sharpness(image)
-    sharpened_image = enhancer.enhance(random.uniform(0.5, 1.5))
-    return sharpened_image
 
 def build_transform(is_train, config):
     resize_im = config.DATA.IMG_SIZE > 32
     if is_train:
-        if config.AUG.AUTO_AUGMENT!='none':
+        if config.AUG.AUTO_AUGMENT!='none' and config.DATA.DATASET == 'nih':
+            transform = transforms.Compose([
+                timm_transforms.RandomResizedCropAndInterpolation(size=(config.DATA.IMG_SIZE, config.DATA.IMG_SIZE), scale=(0.6, 0.85), ratio=(0.75, 1.3333), interpolation=config.DATA.INTERPOLATION),
+                transforms.RandomHorizontalFlip(),
+                rand_augment_transform(config_str=config.AUG.AUTO_AUGMENT, transforms=_RAND_TRANSFORMS, hparams={"interpolation":timm_transforms.Image.BICUBIC}),
+                transforms.ToTensor(),
+                transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD),
+                transforms.RandomErasing(p=config.AUG.REPROB, scale=(0.02,0.02), inplace=True),
+                transforms.RandomApply([apply_noise], p=0.10),
+            ])
+        elif config.AUG.AUTO_AUGMENT!='none':
             # this should always dispatch to transforms_imagenet_train
             transform = create_transform(
                 input_size=config.DATA.IMG_SIZE,
@@ -185,23 +219,8 @@ def build_transform(is_train, config):
                 # ratio=(0.75, 1.33333),
             )
             transform.transforms.append(transforms.RandomApply([apply_noise], p=0.10))
-        else:
-            transform = transforms.Compose([
-                transforms.RandomResizedCrop(size=config.DATA.IMG_SIZE, scale=(0.7, 1.3), ratio=(0.75, 1.3333), interpolation=get_interpolation_mode(config.DATA.INTERPOLATION)),
-                transforms.RandomApply([transforms.RandomRotation(degrees=(10, 175), interpolation=get_interpolation_mode(config.DATA.INTERPOLATION)),
-                                        transforms.RandomHorizontalFlip(p=0.5), 
-                                        # transforms.RandomVerticalFlip(p=0.5), 
-                                        transforms.RandomAffine(degrees=(15, 15), translate=(0.1, 0.3), scale=(0.8, 1.3333), interpolation=get_interpolation_mode(config.DATA.INTERPOLATION)),
-                                        transforms.RandomPerspective(distortion_scale=0.35, p=0.5, interpolation=get_interpolation_mode(config.DATA.INTERPOLATION)),
-                                        transforms.GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 5)),
-                                        transforms.RandomAutocontrast(p=0.5),
-                                        transforms.RandomAdjustSharpness(sharpness_factor=2, p=0.5),
-                                        ], p=0.5),
-                transforms.ToTensor(),
-                transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD),
-                transforms.RandomErasing(p=config.AUG.REPROB, scale=(0.02,0.02), inplace=True),
-                transforms.RandomApply([apply_noise], p=0.25),
-            ])
+            
+        
         if not resize_im:
             # replace RandomResizedCropAndInterpolation with
             # RandomCrop
@@ -264,7 +283,7 @@ def get_interpolation_mode(text):
 #     shear_y = random.uniform(-0.2, 0.2)
 #     return transforms.transforms.F.affine(image, angle=0, translate=(0, 0), scale=1, shear=(shear_x, shear_y), fill=0)
 
-def apply_noise(image_tensor, mean=0, std=0.1):
+def apply_noise(image_tensor, mean=0, std=0.05):
     noise = torch.randn_like(image_tensor) * std + mean
     # noisy_image_tensor = torch.clamp(image_tensor + noise, min=0, max=1)
     noisy_image_tensor = image_tensor + noise
