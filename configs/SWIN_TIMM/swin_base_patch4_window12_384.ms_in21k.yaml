@@ -1,0 +1,5 @@
+DATA:
+  IMG_SIZE: 384
+MODEL:
+  TYPE: swin_timm
+  NAME: swin_base_patch4_window12_384.ms_in22k_ft_in1k

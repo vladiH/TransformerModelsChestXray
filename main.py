@@ -16,6 +16,8 @@ import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 import torch.nn.functional as F
 
+import thop
+
 from timm.loss import LabelSmoothingCrossEntropy, SoftTargetCrossEntropy
 from timm.utils import accuracy, AverageMeter
 
@@ -99,9 +101,11 @@ def main(config):
 
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f"number of params: {n_parameters}")
-    if hasattr(model_without_ddp, 'flops'):
-        flops = model_without_ddp.flops()
-        logger.info(f"number of GFLOPs: {flops / 1e9}")
+    # if hasattr(model_without_ddp, 'flops'):
+    #     flops = model_without_ddp.flops()
+    #     logger.info(f"number of GFLOPs: {flops / 1e9}")
+
+    flops(model_without_ddp, logger=logger, config=config)
 
     lr_scheduler = build_scheduler(config, optimizer, len(data_loader_train))
 
@@ -141,7 +145,7 @@ def main(config):
             return
 
     if config.THROUGHPUT_MODE:
-        throughput(data_loader_val, model, logger)
+        # throughput(data_loader_val, model, logger)
         throughput(data_loader_test, model, logger)
         return
 
@@ -400,6 +404,16 @@ def throughput(data_loader, model, logger):
         logger.info(f"batch_size {batch_size} throughput {30 * batch_size / (tic2 - tic1)}")
         return
 
+@torch.no_grad()
+def flops(model, logger, config):
+    model.eval()
+    #TODO: change number of channels if channel data is different to 3
+    input_tensor = torch.randn(1, 3, config.DATA.IMG_SIZE, config.DATA.IMG_SIZE)
+    flops, params = thop.profile(model, inputs=(input_tensor,))
+    logger.info(f"Number of GFLOPs getting with thop: {flops / 1e9}")
+    logger.info(f"Number of params getting with thop: {params}")
+    return
+
 def early_stopping(monitor, monitor_auc, monitor_loss,  monitor_previus_value):
     if monitor == 'auc':
         if monitor_auc > monitor_previus_value:
@@ -463,23 +477,34 @@ if __name__ == '__main__':
 
 #https://pytorch.org/docs/stable/elastic/run.html
 
+#COMMAND FOR TRAINING MAXVIT, SWIN, VIT
 # nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
-#   --cfg configs/MAXVIT/maxvit_tiny_tf_224.in1k.yaml \
+#   --cfg configs/MAXVIT/maxvit_base_tf_384.in21k.yaml \
 #   --trainset ../data/images/ --validset ../data/images/ --testset ../data/images/ \
 #   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
-#   --batch-size 32 --output output/ --tag noAmp --num_mlp_heads 0 > log.txt & disown
-
-# nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
-#   --cfg configs/MAXVIT/maxvit_large_tf_224.in21k.yaml \
-#   --trainset ../data/images/ --validset ../data/images/ --testset ../data/images/ \
-#   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
-#   --batch-size 32 --output output/ --tag paper --num_mlp_heads 3 --accumulation-steps 8 --amp-opt-level > log.txt & disown
+#   --batch-size 16 --output output/ --tag paper --num_mlp_heads 3 --accumulation-steps 2 --amp-opt-level > log.txt & disown
 
 # nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
 #   --cfg configs/SWIN_TIMM/swin_tiny_patch4_window7_224.ms_in1k.yaml \
 #   --trainset ../data/images/ --validset ../data/images/ --testset ../data/images/ \
 #   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
 #   --batch-size 32 --output output/ --tag paper --num_mlp_heads 3 --accumulation-steps 8 --amp-opt-level > log.txt & disown
+
+# nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
+#   --cfg configs/VIT_TIMM/vit_tiny_patch16_224.augreg_in21k.yaml \
+#   --trainset ../data/images/ --validset ../data/images/ --testset ../data/images/ \
+#   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
+#   --batch-size 32 --output output/ --tag paper --num_mlp_heads 3 --amp-opt-level > log.txt & disown
+
+#COMMAND FOR THROUGHTPUT
+#At firts: pip install htop
+#deactivate config.TRAIN.AUTO_RESUME and run command without amp-opt-level:
+# nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
+#   --cfg configs/VIT_TIMM/vit_tiny_patch16_224.augreg_in21k.yaml \
+#   --trainset ../data/images/ --validset ../data/images/ --testset ../data/images/ \
+#   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
+#   --batch-size 32 --output output/ --tag paper --num_mlp_heads 3 --throughput > log.txt & disown
+
 
 # nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
 #   --cfg configs/MAXVIT/maxvit_base_tf_224.in1k.yaml --resume path/to/pretrain/swin_large_patch4_window7_224_22k.pth \

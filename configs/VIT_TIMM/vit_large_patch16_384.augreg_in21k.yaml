@@ -1,0 +1,5 @@
+DATA:
+  IMG_SIZE: 384
+MODEL:
+  TYPE: vit_timm
+  NAME: vit_large_patch16_384.augreg_in21k_ft_in1k

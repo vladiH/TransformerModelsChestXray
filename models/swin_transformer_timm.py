@@ -15,10 +15,10 @@ class SwinTransformerTimm(nn.Module):
     """
     def __init__(self, model_name = 'swin_tiny_patch4_window7_224.ms_in1k', img_size=224,  in_chans=3, num_classes=14, num_mlp_heads=3, **kwargs):
         super(SwinTransformerTimm,self).__init__()
-        self.model=timm.create_model(model_name, pretrained=True, in_chans=in_chans, num_classes=0)
+        self.model=timm.create_model(model_name, pretrained=True, in_chans=in_chans, num_classes=0, img_size=img_size)
         
-        expected_img_size = self.model.default_cfg['input_size'][1]
-        assert img_size == expected_img_size, f"Input img_size ({img_size}) has the wrong value. Expected ({expected_img_size}) for the current model {model_name}."
+        #expected_img_size = self.model.default_cfg['input_size'][1]
+        #assert img_size == expected_img_size, f"Input img_size ({img_size}) has the wrong value. Expected ({expected_img_size}) for the current model {model_name}."
 
         self.num_classes = num_classes
         self.num_mlp_heads = num_mlp_heads
