@@ -1,5 +1,0 @@
-DATA:
-  IMG_SIZE: 512
-MODEL:
-  TYPE: maxvit
-  NAME: maxvit_large_tf_512.in1k

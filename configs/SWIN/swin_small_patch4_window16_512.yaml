@@ -1,0 +1,13 @@
+DATA:
+  IMG_SIZE: 512
+MODEL:
+  TYPE: swin
+  NAME: swin_small_patch4_window16_512
+  # DROP_PATH_RATE: 0.3
+  SWIN:
+    EMBED_DIM: 96
+    DEPTHS: [ 2, 2, 18, 2 ]
+    NUM_HEADS: [ 3, 6, 12, 24 ]
+    WINDOW_SIZE: 16
+TEST:
+  CROP: True

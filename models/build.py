@@ -5,7 +5,7 @@
 # Written by Ze Liu
 # --------------------------------------------------------
 
-from .swin_transformer import SwinTransformer
+from .swin_transformer import SwinTransformerTimm as SwinTransformerCustom
 from .maxvit_transformer import MaxVitTransformer
 from .swin_transformer_timm import SwinTransformerTimm
 from .vit_transformer_timm import VitTransformerTimm
@@ -13,7 +13,7 @@ from .vit_transformer_timm import VitTransformerTimm
 def build_model(config):
     model_type = config.MODEL.TYPE
     if model_type == 'swin':
-        model = SwinTransformer(img_size=config.DATA.IMG_SIZE,
+        model = SwinTransformerCustom(img_size=config.DATA.IMG_SIZE,
                                 patch_size=config.MODEL.SWIN.PATCH_SIZE,
                                 in_chans=config.MODEL.SWIN.IN_CHANS,
                                 num_classes=config.MODEL.NUM_CLASSES,

@@ -47,6 +47,9 @@ _C.MODEL = CN()
 _C.MODEL.TYPE = 'maxvit'
 # Model name
 _C.MODEL.NAME = 'maxvit_tiny_tf_224.in1k'
+# Pretrained weight from checkpoint, could be imagenet22k pretrained weight
+# could be overwritten by command line argument
+_C.MODEL.PRETRAINED = ''
 # Checkpoint to resume, could be overwritten by command line argument
 _C.MODEL.RESUME = ''
 # Number of classes, overwritten in data preparation
@@ -84,13 +87,18 @@ _C.TRAIN.START_EPOCH = 0
 _C.TRAIN.EPOCHS = 300
 _C.TRAIN.WARMUP_EPOCHS = 20
 _C.TRAIN.WEIGHT_DECAY = 0.05
+#transformer
+# _C.TRAIN.BASE_LR = 3e-3
+# _C.TRAIN.WARMUP_LR = 5e-6
+# _C.TRAIN.MIN_LR = 5e-4
+#swin
 _C.TRAIN.BASE_LR = 5e-4
 _C.TRAIN.WARMUP_LR = 5e-7
 _C.TRAIN.MIN_LR = 5e-6
 # Clip gradient norm
 _C.TRAIN.CLIP_GRAD = 5.0
 # Auto resume from latest checkpoint
-_C.TRAIN.AUTO_RESUME = True
+_C.TRAIN.AUTO_RESUME = False
 # Gradient accumulation steps
 # could be overwritten by command line argument
 _C.TRAIN.ACCUMULATION_STEPS = 0
@@ -220,6 +228,8 @@ def update_config(config, args, ommit=False):
             config.merge_from_list(args.opts)
 
         # merge from specific arguments
+        if args.pretrained:
+            config.MODEL.PRETRAINED = args.pretrained
         if args.batch_size:
             config.DATA.BATCH_SIZE = args.batch_size
         if args.data_path:
