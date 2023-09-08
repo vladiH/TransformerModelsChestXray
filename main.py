@@ -519,16 +519,23 @@ if __name__ == '__main__':
 #   --batch-size 32 --output output/ --tag paper --num_mlp_heads 3 --throughput > log.txt & disown
 
 #CoMMAND FOR RESCALE
+#FOR SWIN
 # nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
 #   --cfg configs/SWIN/swin_tiny_patch4_window12_384.yaml --pretrained output/swin_tiny_patch4_window12_384/ckpt_epoch_21.pth \
 #   --trainset ../data/images/ --validset ../data/images/ --testset ../data/images/ \
 #   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
 #   --batch-size 32 --output output/ --tag paper --num_mlp_heads 3 --accumulation-steps 8 --amp-opt-level > log.txt & disown
 
+#FOR VIT
+# nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
+#   --cfg configs/VIT/vit_small_patch16_512.yaml --pretrained output/vit_small_patch16_512/ckpt_epoch_12.pth \
+#   --trainset ../data/images/ --validset ../data/images/ --testset ../data/images/ \
+#   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
+#   --batch-size 16 --output output/ --tag paper --num_mlp_heads 3 --accumulation-steps 2 --amp-opt-level > log.txt & disown
 
 
 # nohup torchrun  --nproc_per_node 1 --master_port 12345 main.py \
-#   --cfg configs/MAXVIT/maxvit_tiny_tf_224.in1k.yaml --resume path/to/pretrain/swin_large_patch4_window7_224_22k.pth \
+#   --cfg configs/VIT/vit_small_patch16_512.yaml --resume output/vit_small_patch16_512/ckpt_epoch_12.pth \
 #   --trainset ../data/images/ --validset ../data/images/ --testset ../data/images/ \
 #   --train_csv_path configs/NIH/train.csv --valid_csv_path configs/NIH/validation.csv --test_csv_path configs/NIH/test.csv \
 #   --batch-size 32 --output output/ --tag paper --num_mlp_heads 3 > log.txt & disown

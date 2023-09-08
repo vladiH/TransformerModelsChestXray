@@ -1,0 +1,13 @@
+# only for evaluation
+DATA:
+  IMG_SIZE: 512
+MODEL:
+  TYPE: vit
+  NAME: vit_large_patch16_512
+  VIT:
+    DEPTHS: 24
+    EMBED_DIM: 1024
+    NUM_HEADS: 16
+    PATCH_SIZE: 16
+TEST:
+  CROP: True

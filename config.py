@@ -62,6 +62,14 @@ _C.MODEL.DROP_PATH_RATE = 0.1
 # Label Smoothing
 _C.MODEL.LABEL_SMOOTHING = 0.1
 
+# Vit transformer parameters
+_C.MODEL.VIT = CN()
+_C.MODEL.VIT.PATCH_SIZE = 16
+_C.MODEL.VIT.IN_CHANS = 3
+_C.MODEL.VIT.EMBED_DIM = 768
+_C.MODEL.VIT.DEPTHS = 12
+_C.MODEL.VIT.NUM_HEADS = 12
+
 # Swin Transformer parameters
 _C.MODEL.SWIN = CN()
 _C.MODEL.SWIN.PATCH_SIZE = 4

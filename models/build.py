@@ -6,6 +6,7 @@
 # --------------------------------------------------------
 
 from .swin_transformer import SwinTransformerTimm as SwinTransformerCustom
+from .vit_transformer import VitTransformerTimm as VitTransformerCustom
 from .maxvit_transformer import MaxVitTransformer
 from .swin_transformer_timm import SwinTransformerTimm
 from .vit_transformer_timm import VitTransformerTimm
@@ -39,6 +40,15 @@ def build_model(config):
     elif model_type == 'vit_timm':
         model = VitTransformerTimm(model_name=config.MODEL.NAME, img_size=config.DATA.IMG_SIZE, in_chans=config.MODEL.SWIN.IN_CHANS,
                                 num_classes=config.MODEL.NUM_CLASSES, num_mlp_heads=config.NIH.num_mlp_heads)
+    if model_type == 'vit':
+        model = VitTransformerCustom(img_size=config.DATA.IMG_SIZE,
+                                patch_size=config.MODEL.VIT.PATCH_SIZE,
+                                in_chans=config.MODEL.VIT.IN_CHANS,
+                                num_classes=config.MODEL.NUM_CLASSES,
+                                embed_dim=config.MODEL.VIT.EMBED_DIM,
+                                depths=config.MODEL.VIT.DEPTHS,
+                                num_heads=config.MODEL.VIT.NUM_HEADS,
+                                num_mlp_heads=config.NIH.num_mlp_heads)
     else:
         raise NotImplementedError(f"Unkown model: {model_type}")
 
