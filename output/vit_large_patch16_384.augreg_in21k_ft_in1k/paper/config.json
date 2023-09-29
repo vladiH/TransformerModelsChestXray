@@ -1,0 +1,100 @@
+AMP_OPT_LEVEL: false
+AUG:
+  AUTO_AUGMENT: rand-m5-p0.5-mstd0.5-inc1
+  COLOR_JITTER: 0.0
+  CUTMIX: 0
+  CUTMIX_MINMAX: null
+  MIXUP: 0
+  MIXUP_MODE: batch
+  MIXUP_PROB: 1.0
+  MIXUP_SWITCH_PROB: 0.5
+  RECOUNT: 1
+  REMODE: pixel
+  REPROB: 0.25
+BASE:
+- ''
+DATA:
+  BATCH_SIZE: 32
+  CACHE_MODE: part
+  DATASET: nih
+  DATA_PATH: ''
+  IMG_SIZE: 384
+  INTERPOLATION: bicubic
+  NUM_WORKERS: 16
+  PIN_MEMORY: true
+  ZIP_MODE: false
+EVAL_MODE: false
+LOCAL_RANK: 0
+MAX_CHECKPOINTS: 3
+MODEL:
+  DROP_PATH_RATE: 0.1
+  DROP_RATE: 0.0
+  LABEL_SMOOTHING: 0.1
+  MAXVIT:
+    IN_CHANS: 3
+  NAME: vit_large_patch16_384.augreg_in21k_ft_in1k
+  NUM_CLASSES: 14
+  RESUME: ''
+  SWIN:
+    APE: false
+    DEPTHS:
+    - 2
+    - 2
+    - 6
+    - 2
+    EMBED_DIM: 96
+    IN_CHANS: 3
+    MLP_RATIO: 4.0
+    NUM_HEADS:
+    - 3
+    - 6
+    - 12
+    - 24
+    PATCH_NORM: true
+    PATCH_SIZE: 4
+    QKV_BIAS: true
+    QK_SCALE: null
+    WINDOW_SIZE: 7
+  TYPE: vit_timm
+NIH:
+  num_mlp_heads: 3
+  test_csv_path: configs/NIH/test.csv
+  testset: ../data/images/
+  train_csv_path: configs/NIH/train.csv
+  trainset: ../data/images/
+  valid_csv_path: configs/NIH/validation.csv
+  validset: ../data/images/
+OUTPUT: output/vit_large_patch16_384.augreg_in21k_ft_in1k/paper
+PRINT_FREQ: 100
+SAVE_FREQ: 1
+SEED: 0
+TAG: paper
+TEST:
+  CROP: true
+THROUGHPUT_MODE: true
+TRAIN:
+  ACCUMULATION_STEPS: 0
+  AUTO_RESUME: false
+  BASE_LR: 3.125e-05
+  CLIP_GRAD: 5.0
+  EARLYSTOPPING:
+    MONITOR: auc
+    PATIENCE: 5
+  EPOCHS: 300
+  LR_SCHEDULER:
+    DECAY_EPOCHS: 30
+    DECAY_RATE: 0.1
+    NAME: cosine
+  MIN_LR: 3.125e-07
+  OPTIMIZER:
+    BETAS:
+    - 0.9
+    - 0.999
+    EPS: 1.0e-08
+    MOMENTUM: 0.9
+    NAME: adamw
+  START_EPOCH: 0
+  USE_CHECKPOINT: false
+  WARMUP_EPOCHS: 20
+  WARMUP_LR: 3.125e-08
+  WEIGHT_DECAY: 0.05
